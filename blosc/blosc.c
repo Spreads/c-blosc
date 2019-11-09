@@ -2305,3 +2305,213 @@ int blosc_free_resources(void)
 
   return blosc_release_threadpool(g_global_context);
 }
+
+
+#if defined(HAVE_LZ4)
+int compress_lz4(const char* input, size_t input_length,
+                 char* output, size_t maxout, int clevel)
+{
+  return lz4_wrap_compress(input, input_length, output, maxout, 10 - clevel);
+}
+
+int decompress_lz4(const char* input, size_t compressed_length,
+                   char* output, size_t maxout)
+{
+  size_t cbytes;
+  cbytes = LZ4_decompress_safe(input, output, compressed_length, (int)maxout);
+  if (cbytes <= 0) {
+    return 0;
+  }
+  return (int)cbytes;
+  //return lz4_wrap_decompress(input, compressed_length, output, maxout);
+}
+
+#endif
+
+#if defined(HAVE_ZSTD)
+
+int compress_zstd(const char* input, size_t input_length,
+                  char* output, size_t maxout, int clevel)
+{
+  return zstd_wrap_compress(input, input_length, output, maxout, clevel);
+}
+
+int decompress_zstd(const char* input, size_t compressed_length,
+                   char* output, size_t maxout)
+{
+  return zstd_wrap_decompress(input, compressed_length, output, maxout);
+}
+
+#endif
+
+#if defined(HAVE_ZLIB)
+
+int compress_zlib(const char* input, size_t input_length,
+                  char* output, size_t maxout, int clevel)
+{
+  return zlib_wrap_compress(input, input_length, output, maxout, clevel);
+}
+
+int decompress_zlib(const char* input, size_t compressed_length,
+                 char* output, size_t maxout)
+{
+  return zlib_wrap_decompress(input, compressed_length, output, maxout);
+}
+
+
+int compress_deflate(const char* input, size_t input_length,
+                     char* output, size_t maxout, int clevel)
+{
+  z_stream strm  = {0};
+  strm.total_in  = strm.avail_in  = input_length;
+  strm.total_out = strm.avail_out = maxout;
+  strm.next_in   = (Bytef *) input;
+  strm.next_out  = (Bytef *) output;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree  = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = -1;
+  int ret = -1;
+
+  err = deflateInit2(&strm, clevel, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  if (err == Z_OK) {
+    err = deflate(&strm, Z_FINISH);
+    if (err == Z_STREAM_END) {
+      ret = strm.total_out;
+    }
+    else {
+      deflateEnd(&strm);
+      return err;
+    }
+  }
+  else {
+    deflateEnd(&strm);
+    return err;
+  }
+
+  deflateEnd(&strm);
+  return ret;
+}
+
+int decompress_deflate(const char* input, size_t compressed_length,
+                       char* output, size_t maxout)
+{
+  z_stream strm  = {0};
+  strm.total_in  = strm.avail_in  = compressed_length;
+  strm.total_out = strm.avail_out = maxout;
+  strm.next_in   = (Bytef *) input;
+  strm.next_out  = (Bytef *) output;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree  = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = -1;
+  int ret = -1;
+
+  err = inflateInit2(&strm, -15); //15 window bits, and the +32 tells zlib to to detect if using gzip or zlib
+  if (err == Z_OK) {
+    err = inflate(&strm, Z_FINISH);
+    if (err == Z_STREAM_END) {
+      ret = strm.total_out;
+    }
+    else {
+      inflateEnd(&strm);
+      return err;
+    }
+  }
+  else {
+    inflateEnd(&strm);
+    return err;
+  }
+
+  inflateEnd(&strm);
+  return ret;
+}
+
+int compress_gzip(const char* input, size_t input_length,
+                  char* output, size_t maxout, int clevel)
+{
+  z_stream strm  = {0};
+  strm.total_in  = strm.avail_in  = input_length;
+  strm.total_out = strm.avail_out = maxout;
+  strm.next_in   = (Bytef *) input;
+  strm.next_out  = (Bytef *) output;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree  = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = -1;
+  int ret = -1;
+
+  err = deflateInit2(&strm, clevel, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+  if (err == Z_OK) {
+    err = deflate(&strm, Z_FINISH);
+    if (err == Z_STREAM_END) {
+      ret = strm.total_out;
+    }
+    else {
+      deflateEnd(&strm);
+      return err;
+    }
+  }
+  else {
+    deflateEnd(&strm);
+    return err;
+  }
+
+  deflateEnd(&strm);
+  return ret;
+}
+
+int decompress_gzip(const char* input, size_t compressed_length,
+                    char* output, size_t maxout)
+{
+  z_stream strm  = {0};
+  strm.total_in  = strm.avail_in  = compressed_length;
+  strm.total_out = strm.avail_out = maxout;
+  strm.next_in   = (Bytef *) input;
+  strm.next_out  = (Bytef *) output;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree  = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = -1;
+  int ret = -1;
+
+  err = inflateInit2(&strm, (15 + 32)); //15 window bits, and the +32 tells zlib to to detect if using gzip or zlib
+  if (err == Z_OK) {
+    err = inflate(&strm, Z_FINISH);
+    if (err == Z_STREAM_END) {
+      ret = strm.total_out;
+    }
+    else {
+      inflateEnd(&strm);
+      return err;
+    }
+  }
+  else {
+    inflateEnd(&strm);
+    return err;
+  }
+
+  inflateEnd(&strm);
+  return ret;
+}
+#endif
+
+int compress_noop(const char* input, size_t input_length,
+                  char* output, size_t maxout, int clevel)
+{
+  return 0;
+}
+
+int decompress_noop(const char* input, size_t compressed_length,
+                    char* output, size_t maxout)
+{
+  return 0;
+}

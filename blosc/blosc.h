@@ -528,6 +528,41 @@ BLOSC_EXPORT void blosc_set_blocksize(size_t blocksize);
  */
 BLOSC_EXPORT void blosc_set_splitmode(int splitmode);
 
+BLOSC_EXPORT int compress_lz4(const char* input, size_t input_length,
+							  char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_lz4(const char* input, size_t compressed_length,
+				   char* output, size_t maxout);
+
+BLOSC_EXPORT int compress_zstd(const char* input, size_t input_length,
+							  char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_zstd(const char* input, size_t compressed_length,
+								char* output, size_t maxout);
+
+BLOSC_EXPORT int compress_zlib(const char* input, size_t input_length,
+							  char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_zlib(const char* input, size_t compressed_length,
+								char* output, size_t maxout);
+
+BLOSC_EXPORT int compress_deflate(const char* input, size_t input_length,
+                               char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_deflate(const char* input, size_t compressed_length,
+                                 char* output, size_t maxout);
+
+BLOSC_EXPORT int compress_gzip(const char* input, size_t input_length,
+								  char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_gzip(const char* input, size_t compressed_length,
+									char* output, size_t maxout);
+
+BLOSC_EXPORT int compress_noop(const char* input, size_t input_length,
+								  char* output, size_t maxout, int clevel);
+
+BLOSC_EXPORT int decompress_noop(const char* input, size_t compressed_length,
+									char* output, size_t maxout);
 
 #ifdef __cplusplus
 }
